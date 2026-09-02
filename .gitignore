@@ -1,0 +1,12 @@
+bin/
+obj/
+portable/
+graphify-out/
+.vs/
+*.user
+*.suo
+
+# Local IDE and OS files
+.idea/
+.DS_Store
+Thumbs.db

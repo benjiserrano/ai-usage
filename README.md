@@ -2,6 +2,8 @@
 
 Widget Windows para cuota restante de Codex CLI y Claude Code.
 
+Desde el menú del icono de bandeja, `Vista compacta` ancla un resumen al extremo inferior izquierdo. La vista completa y su posición se conservan al desactivarla.
+
 ## Desarrollo
 
 ```powershell

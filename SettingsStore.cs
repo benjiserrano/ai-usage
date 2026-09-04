@@ -1,6 +1,6 @@
 using System.Text.Json; using System.IO;
 namespace AIUsage;
-public sealed record WindowSettings(double Left, double Top);
+public sealed record WindowSettings(double Left, double Top, bool CompactMode = false);
 public static class SettingsStore
 {
     private static readonly string Dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "AIUsage");

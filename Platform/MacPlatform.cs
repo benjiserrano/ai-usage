@@ -81,6 +81,46 @@ public sealed class MacPlatform : IPlatform
     private static string Escape(string value) =>
         value.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;");
 
+    // Nombre del servicio bajo el que Claude Code guarda su sesión en el llavero.
+    private const string KeychainService = "Claude Code-credentials";
+
+    public async Task<string?> ReadClaudeCredentialsAsync(CancellationToken ct)
+    {
+        // Un CLAUDE_CONFIG_DIR propio, o una instalación que aún use fichero,
+        // mandan sobre el llavero.
+        var path = ProviderEnvironment.ClaudeCredentialsPath();
+        if (File.Exists(path)) return await File.ReadAllTextAsync(path, ct);
+
+        return await ReadKeychainAsync(ct);
+    }
+
+    private static async Task<string?> ReadKeychainAsync(CancellationToken ct)
+    {
+        try
+        {
+            var info = new ProcessStartInfo("/usr/bin/security")
+            {
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true
+            };
+            info.ArgumentList.Add("find-generic-password");
+            info.ArgumentList.Add("-s");
+            info.ArgumentList.Add(KeychainService);
+            info.ArgumentList.Add("-w");
+
+            using var process = Process.Start(info);
+            if (process is null) return null;
+
+            var output = await process.StandardOutput.ReadToEndAsync(ct);
+            await process.WaitForExitAsync(ct);
+            // Código 44 significa "no existe esa entrada": no hay sesión iniciada.
+            return process.ExitCode == 0 && !string.IsNullOrWhiteSpace(output) ? output.Trim() : null;
+        }
+        catch { return null; }
+    }
+
     public void Notify(string title, string message)
     {
         try

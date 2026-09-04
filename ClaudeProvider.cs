@@ -1,4 +1,3 @@
-using System.IO;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text.Json;
@@ -19,15 +18,15 @@ public sealed class ClaudeProvider : IUsageProvider
     {
         try
         {
-            var path = ProviderEnvironment.ClaudeCredentialsPath();
-            if (!File.Exists(path))
+            var credentials = await AppPlatform.Current.ReadClaudeCredentialsAsync(ct);
+            if (string.IsNullOrWhiteSpace(credentials))
             {
                 lastRequest = default;
                 Emit(UsageSnapshot.Unknown(Name, ProviderState.AuthRequired, "Inicia sesión: claude"));
                 return;
             }
 
-            using var auth = JsonDocument.Parse(await File.ReadAllTextAsync(path, ct));
+            using var auth = JsonDocument.Parse(credentials);
             if (!TryAccessToken(auth.RootElement, out var token))
             {
                 lastRequest = default;

@@ -16,6 +16,12 @@ public interface IPlatform
     /// <summary>Localiza el CLI de Codex con las rutas y convenciones del sistema.</summary>
     CommandLaunch? FindCodex();
 
+    /// <summary>
+    /// JSON de credenciales de Claude Code, o null si no hay sesión iniciada.
+    /// Windows lo lee de disco; macOS lo saca del Keychain.
+    /// </summary>
+    Task<string?> ReadClaudeCredentialsAsync(CancellationToken ct);
+
     /// <summary>Aviso del sistema. Avalonia.TrayIcon no expone globos de notificación.</summary>
     void Notify(string title, string message);
 }

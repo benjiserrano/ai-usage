@@ -55,6 +55,13 @@ public sealed class WindowsPlatform : IPlatform
             Environment.GetEnvironmentVariable("ComSpec"));
     }
 
+    public async Task<string?> ReadClaudeCredentialsAsync(CancellationToken ct)
+    {
+        var path = ProviderEnvironment.ClaudeCredentialsPath();
+        if (!File.Exists(path)) return null;
+        return await File.ReadAllTextAsync(path, ct);
+    }
+
     public void Notify(string title, string message)
     {
         // El toast se emite a través de powershell.exe para no arrastrar el SDK de

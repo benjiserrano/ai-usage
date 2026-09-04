@@ -6,6 +6,8 @@ public sealed record CommandLaunch(string FileName, IReadOnlyList<string> Argume
 
 public static class ProviderEnvironment
 {
+    public static readonly string[] CodexArguments = ["app-server", "--stdio"];
+
     public static string ClaudeCredentialsPath()
     {
         var configDir = Environment.GetEnvironmentVariable("CLAUDE_CONFIG_DIR");
@@ -20,19 +22,7 @@ public static class ProviderEnvironment
         return Path.Combine(root, ".credentials.json");
     }
 
-    public static CommandLaunch? FindCodex()
-    {
-        var local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        var roaming = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-        var known = new[]
-        {
-            Path.Combine(local, "Programs", "OpenAI", "Codex", "bin", "codex.exe"),
-            Path.Combine(roaming, "npm", "codex.cmd")
-        };
-        return FindCommand("codex", ["app-server", "--stdio"], known,
-            Environment.GetEnvironmentVariable("PATH"), Environment.GetEnvironmentVariable("PATHEXT"),
-            Environment.GetEnvironmentVariable("ComSpec"));
-    }
+    public static CommandLaunch? FindCodex() => AppPlatform.Current.FindCodex();
 
     public static CommandLaunch? FindCommand(string name, IReadOnlyList<string> arguments,
         IEnumerable<string> knownPaths, string? path, string? pathExt, string? commandProcessor)

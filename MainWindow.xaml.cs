@@ -42,8 +42,8 @@ public partial class MainWindow : Window
         compactItem = new Forms.ToolStripMenuItem("Vista compacta") { Checked = compactMode, CheckOnClick = true };
         compactItem.CheckedChanged += (_, _) => SetCompactMode(compactItem.Checked);
         menu.Items.Add(compactItem);
-        var startup = new Forms.ToolStripMenuItem("Iniciar con Windows") { Checked = AutoStartEnabled, CheckOnClick = true };
-        startup.CheckedChanged += (_, _) => SetAutoStart(startup.Checked);
+        var startup = new Forms.ToolStripMenuItem(AppPlatform.Current.AutoStartLabel) { Checked = AppPlatform.Current.AutoStartEnabled, CheckOnClick = true };
+        startup.CheckedChanged += (_, _) => AppPlatform.Current.SetAutoStart(startup.Checked);
         menu.Items.Add(startup);
         menu.Items.Add(new Forms.ToolStripSeparator());
         menu.Items.Add("Salir", null, (_, _) =>
@@ -153,30 +153,6 @@ public partial class MainWindow : Window
         }
         catch { }
         return (System.Drawing.Icon)SystemIcons.Application.Clone();
-    }
-
-    private static bool AutoStartEnabled
-    {
-        get
-        {
-            try
-            {
-                using var key = Registry.CurrentUser.OpenSubKey("Software\Microsoft\Windows\CurrentVersion\Run");
-                return key?.GetValue("AIUsage") is not null;
-            }
-            catch { return false; }
-        }
-    }
-
-    private static void SetAutoStart(bool enabled)
-    {
-        try
-        {
-            using var key = Registry.CurrentUser.CreateSubKey("Software\Microsoft\Windows\CurrentVersion\Run");
-            if (enabled) key.SetValue("AIUsage", $"\"{Environment.ProcessPath}\"");
-            else key.DeleteValue("AIUsage", false);
-        }
-        catch { }
     }
 
     private void OnSnapshot(object? sender, UsageSnapshot snapshot)

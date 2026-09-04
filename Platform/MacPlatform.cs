@@ -81,6 +81,22 @@ public sealed class MacPlatform : IPlatform
     private static string Escape(string value) =>
         value.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;");
 
+    public void Notify(string title, string message)
+    {
+        try
+        {
+            var info = new ProcessStartInfo("/usr/bin/osascript") { UseShellExecute = false, CreateNoWindow = true };
+            info.ArgumentList.Add("-e");
+            info.ArgumentList.Add(
+                $"display notification \"{AppleScriptLiteral(message)}\" with title \"{AppleScriptLiteral(title)}\"");
+            Process.Start(info);
+        }
+        catch { }
+    }
+
+    private static string AppleScriptLiteral(string value) =>
+        value.Replace("\\", "\\\\").Replace("\"", "\\\"");
+
     public CommandLaunch? FindCodex()
     {
         // Las apps lanzadas desde Finder heredan un PATH mínimo, sin Homebrew ni gestores

@@ -15,4 +15,7 @@ public interface IPlatform
 
     /// <summary>Localiza el CLI de Codex con las rutas y convenciones del sistema.</summary>
     CommandLaunch? FindCodex();
+
+    /// <summary>Aviso del sistema. Avalonia.TrayIcon no expone globos de notificación.</summary>
+    void Notify(string title, string message);
 }

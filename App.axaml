@@ -1,0 +1,19 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="AIUsage.App"
+             RequestedThemeVariant="Dark">
+  <Application.Resources>
+    <SolidColorBrush x:Key="BackgroundBrush" Color="#101014"/>
+    <SolidColorBrush x:Key="PanelBrush" Color="#17171D"/>
+    <SolidColorBrush x:Key="TextBrush" Color="#E8E8EE"/>
+    <SolidColorBrush x:Key="MutedBrush" Color="#A4A4AE"/>
+  </Application.Resources>
+  <Application.Styles>
+    <FluentTheme/>
+    <!-- Segoe UI en Windows; en macOS cae a Inter, registrada en Program.BuildAvaloniaApp. -->
+    <Style Selector="TextBlock">
+      <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
+      <Setter Property="FontFamily" Value="Segoe UI"/>
+    </Style>
+  </Application.Styles>
+</Application>

@@ -14,17 +14,19 @@ namespace AIUsage;
 
 public partial class MainWindow : Window
 {
-    private const double DefaultWidth = 270;
-    private const double DefaultHeight = 150;
-
     private readonly UsageCoordinator coordinator;
     private readonly TrayIcon tray;
     private readonly NativeMenuItem compactItem;
     private readonly HashSet<string> warned = [];
+    private readonly DispatcherTimer saveTimer;
     private bool quitting;
     private bool compactMode;
     private int fullLeft;
     private int fullTop;
+    private double fullScale;
+    private double compactScale;
+    private double lastWidth;
+    private bool syncingWidth;
 
     public MainWindow(UsageCoordinator c)
     {
@@ -34,9 +36,17 @@ public partial class MainWindow : Window
         coordinator.SnapshotChanged += OnSnapshot;
 
         var settings = SettingsStore.Load();
-        (fullLeft, fullTop) = GetSafePosition(settings);
         compactMode = settings.CompactMode;
+        fullScale = UiScale.Normalize(settings.FullScale, UiScale.DefaultFull);
+        compactScale = UiScale.Normalize(settings.CompactScale, UiScale.DefaultCompact);
+        (fullLeft, fullTop) = GetSafePosition(settings);
         Position = new PixelPoint(fullLeft, fullTop);
+
+        // Arrastrar el borde dispara muchos SizeChanged seguidos: se guarda al reposar.
+        saveTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(400) };
+        // Al soltar el borde se cuadra el ancho con el del contenido escalado (los topes
+        // Min/Max dejarían si no una franja transparente) y se persiste el resultado.
+        saveTimer.Tick += (_, _) => { SyncWidth(); SaveSettings(); };
 
         tray = new TrayIcon { Icon = LoadAppIcon(), ToolTipText = "AI Usage", IsVisible = true };
         var menu = new NativeMenu();
@@ -52,6 +62,8 @@ public partial class MainWindow : Window
         // estado se deriva siempre de compactMode y se reescribe al final.
         compactItem.Click += (_, _) => SetCompactMode(!compactMode);
         menu.Add(compactItem);
+
+        menu.Add(MenuItem("Tamaño por defecto", ResetScale));
 
         var startup = new NativeMenuItem(AppPlatform.Current.AutoStartLabel)
         {
@@ -72,7 +84,7 @@ public partial class MainWindow : Window
 
         ApplyViewMode();
         Opened += (_, _) => { if (compactMode) PositionCompact(); };
-        SizeChanged += (_, _) => { if (compactMode && IsLoaded) PositionCompact(); };
+        SizeChanged += OnSizeChanged;
         Screens.Changed += OnScreensChanged;
     }
 
@@ -111,12 +123,79 @@ public partial class MainWindow : Window
     {
         FullView.IsVisible = !compactMode;
         CompactView.IsVisible = compactMode;
-        MinHeight = compactMode ? 0 : DefaultHeight;
+        ApplyScale();
+        SyncWidth();
 
         if (compactMode)
             Dispatcher.UIThread.Post(PositionCompact, DispatcherPriority.Loaded);
         else
             Position = new PixelPoint(fullLeft, fullTop);
+    }
+
+    private double CurrentScale => compactMode ? compactScale : fullScale;
+
+    /// <summary>Un factor por vista: tipografía, barras y márgenes crecen todos a la vez.</summary>
+    private void ApplyScale()
+    {
+        FullView.LayoutTransform = new ScaleTransform(fullScale, fullScale);
+        CompactView.LayoutTransform = new ScaleTransform(compactScale, compactScale);
+        MinHeight = compactMode ? 0 : UiScale.DesignMinHeight * fullScale;
+    }
+
+    private void SetScale(double scale)
+    {
+        scale = UiScale.Clamp(scale);
+        if (compactMode) compactScale = scale; else fullScale = scale;
+        ApplyScale();
+        SyncWidth();
+    }
+
+    private void ResetScale()
+    {
+        SetScale(compactMode ? UiScale.DefaultCompact : UiScale.DefaultFull);
+        SaveSettings();
+    }
+
+    /// <summary>El alto lo decide el contenido, así que el ancho es lo único que fija la escala.</summary>
+    private void SyncWidth()
+    {
+        var width = UiScale.WidthFor(CurrentScale);
+        syncingWidth = true;
+        Width = width;
+        lastWidth = width;
+        syncingWidth = false;
+    }
+
+    private void OnSizeChanged(object? sender, SizeChangedEventArgs e)
+    {
+        var width = e.NewSize.Width;
+        // El redondeo a píxeles físicos mueve el ancho unas décimas: sin banda muerta la
+        // escala iría derivando sola en cada arranque.
+        if (!syncingWidth && Math.Abs(width - lastWidth) > UiScale.Deadband)
+        {
+            lastWidth = width;
+            if (compactMode) compactScale = UiScale.ScaleFor(width); else fullScale = UiScale.ScaleFor(width);
+            ApplyScale();
+            saveTimer.Stop();
+            saveTimer.Start();
+        }
+
+        if (compactMode && IsLoaded) PositionCompact();
+    }
+
+    private void StartResize(object? sender, PointerPressedEventArgs e)
+    {
+        if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) return;
+        e.Handled = true;
+        BeginResizeDrag(WindowEdge.East, e);
+    }
+
+    private void ZoomWheel(object? sender, PointerWheelEventArgs e)
+    {
+        if (!e.KeyModifiers.HasFlag(KeyModifiers.Control)) return;
+        SetScale(CurrentScale + (e.Delta.Y > 0 ? UiScale.Step : -UiScale.Step));
+        SaveSettings();
+        e.Handled = true;
     }
 
     private void PositionCompact()
@@ -151,12 +230,16 @@ public partial class MainWindow : Window
         base.OnClosing(e);
     }
 
-    private void SaveSettings() => SettingsStore.Save(new(fullLeft, fullTop, compactMode));
+    private void SaveSettings()
+    {
+        saveTimer.Stop();
+        SettingsStore.Save(new(fullLeft, fullTop, compactMode, fullScale, compactScale));
+    }
 
     private (int Left, int Top) GetSafePosition(WindowSettings settings)
     {
-        var width = Scale(DefaultWidth);
-        var height = Scale(DefaultHeight);
+        var width = Scale(UiScale.WidthFor(fullScale));
+        var height = Scale(UiScale.DesignMinHeight * fullScale);
         if (double.IsFinite(settings.Left) && double.IsFinite(settings.Top))
         {
             var saved = new PixelRect(

@@ -2,7 +2,7 @@
 
 Widget de escritorio para la cuota restante de Codex CLI y Claude Code. Funciona en Windows y macOS desde un único código fuente (Avalonia).
 
-Desde el menú del icono de bandeja, `Vista compacta` ancla un resumen al extremo inferior izquierdo. La vista completa y su posición se conservan al desactivarla.
+Desde el menú del icono de bandeja, `Vista compacta` muestra un resumen inicialmente en extremo inferior izquierdo; puede arrastrarse y conserva su posición. La vista completa y su posición se conservan al desactivarla. Otro ajuste permite ocultar proveedores desconectados.
 
 Ambas vistas se escalan arrastrando el tirador del borde derecho o con `Ctrl` + rueda: la tipografía, las barras y los márgenes crecen con el mismo factor, así que la proporción no cambia (el alto lo deduce el contenido). Cada vista recuerda su tamaño y `Tamaño por defecto` en el menú de bandeja lo devuelve al original.
 

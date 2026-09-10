@@ -1,6 +1,14 @@
 using System.Text.Json; using System.IO;
 namespace AIUsage;
-public sealed record WindowSettings(double Left, double Top, bool CompactMode = false, double FullScale = UiScale.DefaultFull, double CompactScale = UiScale.DefaultCompact);
+public sealed record WindowSettings(
+    double Left,
+    double Top,
+    bool CompactMode = false,
+    double FullScale = UiScale.DefaultFull,
+    double CompactScale = UiScale.DefaultCompact,
+    double? CompactLeft = null,
+    double? CompactTop = null,
+    bool ShowDisconnectedProviders = true);
 public static class SettingsStore
 {
     private static readonly string Dir = AppPlatform.Current.SettingsDirectory;

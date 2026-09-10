@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -14,6 +15,29 @@ public sealed class CompactViewTests
         var settings = JsonSerializer.Deserialize<WindowSettings>("{\"Left\":10,\"Top\":20}");
         Assert.NotNull(settings);
         Assert.False(settings.CompactMode);
+    }
+
+    [Fact]
+    public void Legacy_settings_keep_disconnected_providers_visible()
+    {
+        var settings = JsonSerializer.Deserialize<WindowSettings>("{\"Left\":10,\"Top\":20}");
+        Assert.NotNull(settings);
+        Assert.True(settings.ShowDisconnectedProviders);
+        Assert.Null(settings.CompactLeft);
+        Assert.Null(settings.CompactTop);
+    }
+
+    [Fact]
+    public void Provider_filter_hides_non_available_snapshots()
+    {
+        using var coordinator = new UsageCoordinator();
+        coordinator.Snapshots.Add(new UsageSnapshot("Connected", ProviderState.Available, [], DateTimeOffset.UtcNow));
+        coordinator.Snapshots.Add(new UsageSnapshot("Disconnected", ProviderState.AuthRequired, [], DateTimeOffset.UtcNow));
+
+        coordinator.ShowDisconnectedProviders = false;
+
+        Assert.Single(coordinator.VisibleSnapshots);
+        Assert.Equal("Connected", coordinator.VisibleSnapshots.Single().Provider);
     }
 
     [Fact]

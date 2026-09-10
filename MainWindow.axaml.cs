@@ -17,12 +17,15 @@ public partial class MainWindow : Window
     private readonly UsageCoordinator coordinator;
     private readonly TrayIcon tray;
     private readonly NativeMenuItem compactItem;
+    private readonly NativeMenuItem disconnectedItem;
     private readonly HashSet<string> warned = [];
     private readonly DispatcherTimer saveTimer;
     private bool quitting;
     private bool compactMode;
     private int fullLeft;
     private int fullTop;
+    private int? compactLeft;
+    private int? compactTop;
     private double fullScale;
     private double compactScale;
     private double lastWidth;
@@ -39,6 +42,9 @@ public partial class MainWindow : Window
         compactMode = settings.CompactMode;
         fullScale = UiScale.Normalize(settings.FullScale, UiScale.DefaultFull);
         compactScale = UiScale.Normalize(settings.CompactScale, UiScale.DefaultCompact);
+        compactLeft = ToNullablePixel(settings.CompactLeft);
+        compactTop = ToNullablePixel(settings.CompactTop);
+        coordinator.ShowDisconnectedProviders = settings.ShowDisconnectedProviders;
         (fullLeft, fullTop) = GetSafePosition(settings);
         Position = new PixelPoint(fullLeft, fullTop);
 
@@ -62,6 +68,19 @@ public partial class MainWindow : Window
         // estado se deriva siempre de compactMode y se reescribe al final.
         compactItem.Click += (_, _) => SetCompactMode(!compactMode);
         menu.Add(compactItem);
+
+        disconnectedItem = new NativeMenuItem("Mostrar proveedores desconectados")
+        {
+            ToggleType = MenuItemToggleType.CheckBox,
+            IsChecked = coordinator.ShowDisconnectedProviders
+        };
+        disconnectedItem.Click += (_, _) =>
+        {
+            coordinator.ShowDisconnectedProviders = !coordinator.ShowDisconnectedProviders;
+            disconnectedItem.IsChecked = coordinator.ShowDisconnectedProviders;
+            SaveSettings();
+        };
+        menu.Add(disconnectedItem);
 
         menu.Add(MenuItem("Tamaño por defecto", ResetScale));
 
@@ -180,7 +199,7 @@ public partial class MainWindow : Window
             saveTimer.Start();
         }
 
-        if (compactMode && IsLoaded) PositionCompact();
+        if (compactMode && IsLoaded && compactLeft is null) PositionCompact();
     }
 
     private void StartResize(object? sender, PointerPressedEventArgs e)
@@ -203,7 +222,15 @@ public partial class MainWindow : Window
         if (!compactMode) return;
         var area = WorkingArea();
         var margin = Scale(8);
-        Position = new PixelPoint(area.X + margin, area.Bottom - Scale(Bounds.Height) - margin);
+        var width = Scale(Bounds.Width);
+        var height = Scale(Bounds.Height);
+        var left = compactLeft ?? area.X + margin;
+        var top = compactTop ?? area.Bottom - height - margin;
+        left = Math.Clamp(left, area.X, Math.Max(area.X, area.Right - width));
+        top = Math.Clamp(top, area.Y, Math.Max(area.Y, area.Bottom - height));
+        compactLeft = left;
+        compactTop = top;
+        Position = new PixelPoint(left, top);
     }
 
     private void OnScreensChanged(object? sender, EventArgs e) => Dispatcher.UIThread.Post(PositionCompact);
@@ -233,7 +260,8 @@ public partial class MainWindow : Window
     private void SaveSettings()
     {
         saveTimer.Stop();
-        SettingsStore.Save(new(fullLeft, fullTop, compactMode, fullScale, compactScale));
+        SettingsStore.Save(new(fullLeft, fullTop, compactMode, fullScale, compactScale,
+            compactLeft, compactTop, coordinator.ShowDisconnectedProviders));
     }
 
     private (int Left, int Top) GetSafePosition(WindowSettings settings)
@@ -283,8 +311,21 @@ public partial class MainWindow : Window
 
     private void DragWindow(object? sender, PointerPressedEventArgs e)
     {
-        if (!compactMode && e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) BeginMoveDrag(e);
+        if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) return;
+        BeginMoveDrag(e);
     }
+
+    private void FinishCompactDrag(object? sender, PointerReleasedEventArgs e)
+    {
+        if (!compactMode || !e.InitialPressMouseButton.HasFlag(MouseButton.Left)) return;
+        compactLeft = Position.X;
+        compactTop = Position.Y;
+        SaveSettings();
+    }
+
+    private static int? ToNullablePixel(double? value) => value is double position && double.IsFinite(position)
+        ? (int)Math.Round(position)
+        : null;
 }
 
 public sealed class StateColorConverter : IValueConverter

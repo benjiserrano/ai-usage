@@ -5,6 +5,21 @@ namespace AIUsage;
 public sealed class UsageCoordinator : INotifyPropertyChanged, IDisposable
 {
     public ObservableCollection<UsageSnapshot> Snapshots { get; } = new();
+    public IEnumerable<UsageSnapshot> VisibleSnapshots => ShowDisconnectedProviders
+        ? Snapshots
+        : Snapshots.Where(snapshot => snapshot.State == ProviderState.Available);
+    private bool showDisconnectedProviders = true;
+    public bool ShowDisconnectedProviders
+    {
+        get => showDisconnectedProviders;
+        set
+        {
+            if (showDisconnectedProviders == value) return;
+            showDisconnectedProviders = value;
+            PropertyChanged?.Invoke(this, new(nameof(ShowDisconnectedProviders)));
+            PropertyChanged?.Invoke(this, new(nameof(VisibleSnapshots)));
+        }
+    }
     public event PropertyChangedEventHandler? PropertyChanged;
     public event EventHandler<UsageSnapshot>? SnapshotChanged;
     private readonly List<IUsageProvider> providers = [new CodexProvider(), new ClaudeProvider()];
@@ -18,6 +33,6 @@ public sealed class UsageCoordinator : INotifyPropertyChanged, IDisposable
     }
     public async Task RefreshAsync() { if (stop is null) return; await Task.WhenAll(providers.Select(p => p.RefreshAsync(stop.Token))); }
     private async Task PollAsync(CancellationToken ct) { using var timer = new PeriodicTimer(TimeSpan.FromMinutes(1)); while (await timer.WaitForNextTickAsync(ct)) { try { await RefreshAsync(); } catch (OperationCanceledException) { } catch { } } }
-    private void OnSnapshot(object? sender, UsageSnapshot snapshot) { void Update() { var old = Snapshots.FirstOrDefault(x => x.Provider == snapshot.Provider); if (old is not null) Snapshots[Snapshots.IndexOf(old)] = snapshot; else Snapshots.Add(snapshot); PropertyChanged?.Invoke(this, new(nameof(Snapshots))); SnapshotChanged?.Invoke(this, snapshot); } if (System.Windows.Application.Current?.Dispatcher.CheckAccess() == true) Update(); else System.Windows.Application.Current?.Dispatcher.BeginInvoke(Update); }
+    private void OnSnapshot(object? sender, UsageSnapshot snapshot) { void Update() { var old = Snapshots.FirstOrDefault(x => x.Provider == snapshot.Provider); if (old is not null) Snapshots[Snapshots.IndexOf(old)] = snapshot; else Snapshots.Add(snapshot); PropertyChanged?.Invoke(this, new(nameof(Snapshots))); PropertyChanged?.Invoke(this, new(nameof(VisibleSnapshots))); SnapshotChanged?.Invoke(this, snapshot); } if (Avalonia.Threading.Dispatcher.UIThread.CheckAccess()) Update(); else Avalonia.Threading.Dispatcher.UIThread.Post(Update); }
     public void Dispose() { stop?.Cancel(); foreach (var p in providers) { p.SnapshotChanged -= OnSnapshot; p.DisposeAsync().AsTask().GetAwaiter().GetResult(); } stop?.Dispose(); }
 }

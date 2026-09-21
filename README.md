@@ -21,6 +21,22 @@ No existe un binario único para ambos sistemas: es el mismo proyecto publicado 
 dotnet publish -c Release -r win-x64 --self-contained -o portable/win
 ```
 
+### Actualizaciones Windows
+
+El ejecutable portable busca la última release de GitHub al abrirse. Si hay una versión superior, pide confirmación, descarga el `.exe`, valida su SHA-256 y se reinicia con la versión nueva. Cada release Windows debe publicar ambos archivos con estos nombres exactos:
+
+```text
+AIUsage-vX.Y.Z-win-x64.exe
+AIUsage-vX.Y.Z-win-x64.exe.sha256
+```
+
+Genera el hash desde PowerShell:
+
+```powershell
+(Get-FileHash portable/release/AIUsage-vX.Y.Z-win-x64.exe -Algorithm SHA256).Hash.ToLower() + "  AIUsage-vX.Y.Z-win-x64.exe" |
+  Set-Content -NoNewline portable/release/AIUsage-vX.Y.Z-win-x64.exe.sha256
+```
+
 macOS necesita además un bundle `.app` para salir en la barra de menús. `packaging/build-macos.sh` publica y lo monta, pero hay que ejecutarlo en un Mac porque usa `sips`, `iconutil` y `codesign`:
 
 ```bash

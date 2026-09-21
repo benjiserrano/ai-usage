@@ -58,6 +58,7 @@ public partial class MainWindow : Window
         var menu = new NativeMenu();
         menu.Add(MenuItem("Mostrar / ocultar", Toggle));
         menu.Add(MenuItem("Actualizar", () => _ = coordinator.RefreshAsync()));
+        menu.Add(MenuItem("Buscar actualización", () => _ = CheckForUpdateAsync(manual: true)));
 
         compactItem = new NativeMenuItem("Vista compacta")
         {
@@ -102,7 +103,11 @@ public partial class MainWindow : Window
         tray.Clicked += (_, _) => Toggle();
 
         ApplyViewMode();
-        Opened += (_, _) => { if (compactMode) PositionCompact(); };
+        Opened += (_, _) =>
+        {
+            if (compactMode) PositionCompact();
+            _ = CheckForUpdateAsync(manual: false);
+        };
         SizeChanged += OnSizeChanged;
         Screens.Changed += OnScreensChanged;
     }
@@ -121,6 +126,34 @@ public partial class MainWindow : Window
         tray.Dispose();
         if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
             desktop.Shutdown();
+    }
+
+    private async Task CheckForUpdateAsync(bool manual)
+    {
+        var result = await UpdateService.CheckAsync();
+        if (result.Status == UpdateStatus.None)
+        {
+            if (manual) await UpdateDialog.ShowInfoAsync(this, "Actualizaciones", "Ya tienes la última versión.");
+            return;
+        }
+
+        if (result.Status != UpdateStatus.Available || result.Release is null)
+        {
+            if (manual) await UpdateDialog.ShowInfoAsync(this, "Actualizaciones", result.Message ?? "No se pudo buscar actualización.");
+            return;
+        }
+
+        if (!await UpdateDialog.ConfirmAsync(this, result.Release)) return;
+
+        try
+        {
+            await UpdateService.DownloadAndApplyAsync(result.Release);
+            Quit();
+        }
+        catch (Exception ex)
+        {
+            await UpdateDialog.ShowInfoAsync(this, "Actualizaciones", $"No se pudo instalar actualización: {ex.Message}");
+        }
     }
 
     private void SetCompactMode(bool enabled)

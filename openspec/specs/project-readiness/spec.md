@@ -1,27 +1,32 @@
-
-
 # Project Readiness Specification
 
 ## Purpose
 
-Define verifiable delivery behavior for this repository.
+Define the documentation baseline that makes work on the AI Usage desktop widget traceable and reviewable.
 
 ## Requirements
 
-### Requirement: Traceable delivery
+### Requirement: Documented Pending Work
 
-The repository SHALL link approved behavior to implementation tasks and validation evidence.
+The repository SHALL contain a `TODO.md` file that records the objective, deliverables, acceptance criteria, scope, constraints, references, dependencies, validation approach, and knowledge context for pending project work.
 
-#### Scenario: Delivery has evidence
+#### Scenario: TODO document exists
 
-- **WHEN** an approved change is ready for review
-- **THEN** its tasks and validation evidence SHALL reference the changed requirement
+- **WHEN** a reviewer inspects the repository root
+- **THEN** `TODO.md` SHALL be present
+- **AND** it SHALL identify the desktop widget context and the scope of the documented change
 
-## Traceability
+#### Scenario: Documentation-only scope is preserved
 
-- SPEC-001 links this requirement to TASK-001 and test evidence.
+- **WHEN** the pending-work documentation is updated
+- **THEN** source code, interface, packaging, and configuration files SHALL remain outside the change unless a later approved proposal explicitly includes them
 
-#### Scenario: Invalid evidence
+### Requirement: OpenSpec Traceability
 
-- **WHEN** evidence does not prove required behavior
-- **THEN** change SHALL NOT be considered complete
+The repository SHALL link proposal-phase work to OpenSpec artifacts before implementation changes are made.
+
+#### Scenario: Proposal preserves existing intent
+
+- **WHEN** an OpenSpec propose phase is executed after prior TODO documentation work
+- **THEN** the proposal SHALL preserve the TODO objective, deliverables, acceptance criteria, scope limits, and validation notes
+- **AND** it SHALL avoid replacing those details with an unrelated summary

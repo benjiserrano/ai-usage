@@ -4,7 +4,8 @@
 
 - Treat `openspec/specs/` as the current source of truth.
 - Put proposed behavior under `openspec/changes/<change-name>/`.
-- Agree on proposal, delta specs, design, and tasks before implementation.- Archive completed changes so source-of-truth specs match deployed behavior.
+- Agree on proposal, delta specs, design, and tasks before implementation.
+- Archive completed changes so source-of-truth specs match deployed behavior.
 
 ## Principles
 

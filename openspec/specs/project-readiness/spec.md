@@ -30,4 +30,3 @@ The repository SHALL link proposal-phase work to OpenSpec artifacts before imple
 - **WHEN** an OpenSpec propose phase is executed after prior TODO documentation work
 - **THEN** the proposal SHALL preserve the TODO objective, deliverables, acceptance criteria, scope limits, and validation notes
 - **AND** it SHALL avoid replacing those details with an unrelated summary
-
